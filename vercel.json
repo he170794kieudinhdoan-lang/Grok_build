@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/", "destination": "/api/index" },
+    { "source": "/gift", "destination": "/public/gift/index.html" }
+  ],
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 10
+    }
+  }
+}
