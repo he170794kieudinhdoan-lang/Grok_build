@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gift Premium Runner</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Segoe UI, system-ui, sans-serif;
+      background: #0f1115;
+      color: #e8eaed;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 8px; font-size: 1.6rem; }
+    .sub { color: #9aa0a6; margin-bottom: 20px; }
+    .card {
+      background: #171a21;
+      border: 1px solid #2a2f3a;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      background: #0f1115;
+      color: #e8eaed;
+      border: 1px solid #2a2f3a;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: Consolas, monospace;
+      font-size: 14px;
+      resize: vertical;
+    }
+    button {
+      background: #1d9bf0;
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .meta { color: #9aa0a6; font-size: 13px; margin-top: 8px; }
+    .jobs { display: grid; gap: 10px; }
+    .job {
+      border: 1px solid #2a2f3a;
+      border-radius: 10px;
+      padding: 12px;
+      background: #12151b;
+    }
+    .job-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .badge {
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .pending { background: #3c4043; }
+    .running { background: #174ea6; }
+    .success { background: #137333; }
+    .failed { background: #b3261e; }
+    .logs {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #bdc1c6;
+      white-space: pre-wrap;
+      max-height: 120px;
+      overflow: auto;
+    }
+    .toolbar { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Gift Premium Runner</h1>
+    <p class="sub">Nhập danh sách username (mỗi dòng 1 user). Chạy tuần tự — 1 tác vụ tại một thời điểm.</p>
+
+    <div class="card">
+      <label for="usernames"><strong>Danh sách username</strong></label>
+      <textarea id="usernames" placeholder="dngkhoa3006&#10;user_khac&#10;another_user"></textarea>
+      <div class="toolbar">
+        <button id="startBtn">Bắt đầu chạy</button>
+        <span class="meta" id="hint">Ví dụ: không cần @, phân cách bằng xuống dòng</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Tiến trình batch hiện tại</h3>
+      <div id="batchMeta" class="meta">Chưa có batch</div>
+      <div id="jobs" class="jobs"></div>
+    </div>
+  </div>
+
+  <script>
+    const startBtn = document.getElementById('startBtn');
+    const usernamesEl = document.getElementById('usernames');
+    const jobsEl = document.getElementById('jobs');
+    const batchMetaEl = document.getElementById('batchMeta');
+
+    let currentBatchId = null;
+    let pollTimer = null;
+
+    function badge(status) {
+      return `<span class="badge ${status}">${status}</span>`;
+    }
+
+    function renderBatch(batch) {
+      batchMetaEl.textContent = `Batch ${batch.id} — ${batch.status} — ${batch.jobs.length} jobs`;
+      jobsEl.innerHTML = batch.jobs.map((job) => `
+        <div class="job">
+          <div class="job-head">
+            <strong>@${job.username}</strong>
+            ${badge(job.status)}
+          </div>
+          <div class="logs">${(job.logs || []).map((l) => l.message).join('\n') || (job.error || '')}</div>
+        </div>
+      `).join('');
+    }
+
+    async function pollBatch() {
+      if (!currentBatchId) return;
+      const res = await fetch(`/api/gift/batches/${currentBatchId}`);
+      if (!res.ok) return;
+      const batch = await res.json();
+      renderBatch(batch);
+      if (['completed', 'completed_with_errors', 'failed'].includes(batch.status)) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+        startBtn.disabled = false;
+      }
+    }
+
+    startBtn.addEventListener('click', async () => {
+      const text = usernamesEl.value.trim();
+      if (!text) return alert('Nhập ít nhất 1 username');
+
+      startBtn.disabled = true;
+      const res = await fetch('/api/gift/batches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernames: text }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Lỗi tạo batch');
+        startBtn.disabled = false;
+        return;
+      }
+
+      currentBatchId = data.batchId;
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(pollBatch, 2000);
+      pollBatch();
+    });
+  </script>
+</body>
+</html>

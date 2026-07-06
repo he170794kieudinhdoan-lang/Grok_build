@@ -1,0 +1,26 @@
+{
+  "name": "x-gift-runner-account2",
+  "version": "1.0.0",
+  "description": "X Gift Premium automation — Account 2",
+  "main": "src/gift-only.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/gift-only.js",
+    "dev": "nodemon src/gift-only.js",
+    "gift:stripe": "node src/automation/open-stripe.js",
+    "build:exe": "node scripts/build-exe.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "playwright": "^1.51.1"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.3",
+    "caxa": "^3.0.1",
+    "nodemon": "^3.1.0"
+  },
+  "author": "",
+  "license": "ISC"
+}
